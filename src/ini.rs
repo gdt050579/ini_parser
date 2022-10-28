@@ -366,7 +366,7 @@ impl ParserObject<'_> {
         // search first ']' character
         let mut end = start;
         loop {
-            if end < self.buf.len() {
+            if end >= self.buf.len() {
                 return Err(self.build_error_message(
                     "Unexpected end of section definition",
                     start,
@@ -488,6 +488,7 @@ impl ParserObject<'_> {
             if (ch_type == CharType::NewLine) || (ch_type == CharType::Comment) {
                 break;
             }
+            index+=1;
         }
         // trim any extra spaces from the end
         while (index>start) && (self.get_char_type(index)==CharType::Space) {
@@ -499,12 +500,21 @@ impl ParserObject<'_> {
         Ok(index)
     }
 
+    #[inline]
+    fn parse_key_name(&mut self, index: usize)-> Result<usize, String> {
+        let next = self.parse_same_type(index);
+        println!("key={}",&self.text[index..next]);
+        self.status = Status::ExpectAssign;
+        Ok(next)
+    }
+
     fn parse_for_section_or_key(&mut self) -> Result<(), String> {
         let ch_type = self.get_char_type(self.pos);
         match ch_type {
             CharType::Space => self.pos = self.parse_same_type(self.pos),
             CharType::NewLine => self.pos = self.parse_same_type(self.pos),
             CharType::Comment => self.pos = self.parse_until_eol(self.pos),
+            CharType::Word => self.pos = self.parse_key_name(self.pos)?,
             CharType::StartSection => self.pos = self.parse_section_name(self.pos)?,
             _ => {
                 return Err(self.build_error_message(
@@ -550,6 +560,7 @@ impl ParserObject<'_> {
     }
     pub fn parse(&mut self) -> Result<(), String> {
         while self.pos < self.buf.len() {
+            //println!("Index: {}, status={:?}",self.pos,self.status);
             match self.status {
                 Status::ExpectSectionNameOrKey => self.parse_for_section_or_key()?,
                 Status::ExpectAssign => self.parse_for_assign()?,
