@@ -406,7 +406,75 @@ impl ParserObject<'_> {
     }
 
     #[inline]
+    fn add_value(&mut self, start: usize, end: usize) {
+        println!("Value = {}",&self.text[start..end]);
+    }
+
+    #[inline]
+    fn parse_three_quotes_string(&mut self, mut index: usize) -> Result<usize, String> {
+        // we assume that we start with three quotes
+        let quote_char = self.buf[index];
+        let start = index;
+        index += 3;
+        while index < self.buf.len() {
+            if self.buf[index] == quote_char {
+                if (index + 3 <= self.buf.len())
+                    && (self.buf[index + 1] == quote_char)
+                    && (self.buf[index + 2] == quote_char)
+                {
+                    return Ok(index + 3);
+                }
+            }
+            index += 1;
+        }
+        return Err(self.build_error_message(
+            "Unexpected end of multi-line string",
+            start,
+            self.buf.len(),
+        ));
+    }
+    #[inline]
+    fn parse_single_quote_string(&mut self, mut index: usize) -> Result<usize, String> {
+        // we assume that we start with one quote
+        // single quote string is a single line string
+        let quote_char = self.buf[index];
+        let start = index;
+        index += 1;
+        while index < self.buf.len() {
+            if self.buf[index] == quote_char {
+                return Ok(index + 1);
+            }
+            if self.get_char_type(index) == CharType::NewLine {
+                return Err(self.build_error_message(
+                    "Unexpected end of single-line string",
+                    start,
+                    index,
+                ));
+            }
+            index += 1;
+        }
+        return Err(self.build_error_message(
+            "Unexpected end of single-line string",
+            start,
+            self.buf.len(),
+        ));
+    }
+    #[inline]
     fn parse_string(&mut self, mut index: usize) -> Result<usize, String> {
+        // assume we start with a single or double quote
+        let quote_char = self.buf[index];
+        if (index + 3 <= self.buf.len())
+            && (self.buf[index + 1] == quote_char)
+            && (self.buf[index + 2] == quote_char)
+        {
+            let next = self.parse_three_quotes_string(index)?;
+            self.add_value(index+3,next-3);
+            index = next;
+        } else {
+            let next = self.parse_single_quote_string(index)?;
+            self.add_value(index+1,next-1);
+            index = next;
+        }
         Ok(index)
     }
 

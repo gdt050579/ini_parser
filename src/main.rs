@@ -3,8 +3,9 @@ mod ini;
 fn main() {
     let i = ini::Ini::from(
         "[section] ; my section
-    value = 100
-    compute = 'some value'
+        compute = 'some value'
+        value = 100
+
     ; a comment
     ",
     );
