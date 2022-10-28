@@ -480,6 +480,22 @@ impl ParserObject<'_> {
 
     #[inline]
     fn parse_word(&mut self, mut index: usize) -> Result<usize, String> {
+        // assume that we start with a valid character
+        // we should move until the end of the line or until a comment is found
+        let start = index;
+        while index<self.buf.len() {
+            let ch_type = self.get_char_type(index);
+            if (ch_type == CharType::NewLine) || (ch_type == CharType::Comment) {
+                break;
+            }
+        }
+        // trim any extra spaces from the end
+        while (index>start) && (self.get_char_type(index)==CharType::Space) {
+            index-=1;
+        }
+        index+=1;
+        // now we have a value between start and index
+        self.add_value(start, index);
         Ok(index)
     }
 
