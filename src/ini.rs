@@ -445,6 +445,9 @@ impl ParserObject<'_> {
                 end,
             ));
         }
+        // move current section to the hash_map (if any)
+        self.insert_current_section();
+        // create the new section
         self.current_section = Some(Section {
             name: String::from(&self.text[start..end]),
             items: HashMap::with_capacity(4),
@@ -456,6 +459,16 @@ impl ParserObject<'_> {
     #[inline]
     fn add_value(&mut self, start: usize, end: usize) {
         println!("Value = {}", &self.text[start..end]);
+    }
+
+    #[inline]
+    fn insert_current_section(&mut self) {
+        if self.current_section.is_some()
+        {
+            let sect = self.current_section.take().unwrap();
+            self.ini.sections.insert(self.current_section_hash, sect);
+            self.current_section_hash = 0;
+        }
     }
 
     #[inline]
