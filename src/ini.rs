@@ -328,6 +328,8 @@ struct ParserObject<'a> {
     text: &'a str,
     current_section: Option<Section>,
     current_section_hash: u64,
+    current_key: Option<&'a [u8]>,
+    current_key_hash: u64,
 }
 
 impl ParserObject<'_> {
@@ -340,6 +342,8 @@ impl ParserObject<'_> {
             text: text,
             current_section: None,
             current_section_hash: 0,
+            current_key: None,
+            current_key_hash: 0,
         }
     }
 
@@ -463,8 +467,7 @@ impl ParserObject<'_> {
 
     #[inline]
     fn insert_current_section(&mut self) {
-        if self.current_section.is_some()
-        {
+        if self.current_section.is_some() {
             let sect = self.current_section.take().unwrap();
             self.ini.sections.insert(self.current_section_hash, sect);
             self.current_section_hash = 0;
@@ -564,7 +567,20 @@ impl ParserObject<'_> {
     #[inline]
     fn parse_key_name(&mut self, index: usize) -> Result<usize, String> {
         let next = self.parse_same_type(index);
-        println!("key={}", &self.text[index..next]);
+        if self.current_section.is_none() {
+            self.current_section = Some(Section { name: String::new(), items: HashMap::new() });
+        }
+        let hash = compute_string_hash(&self.buf[index..next]);
+        let sect = self.current_section.as_mut().unwrap();
+        if sect.items.contains_key(&hash) {
+            return Err(self.build_error_message(
+                "Key already exists in current section",
+                index,
+                next,
+            ));        
+        }
+        self.current_key = Some(&self.buf[index..next]);
+        self.current_key_hash = hash;
         self.status = Status::ExpectAssign;
         Ok(next)
     }
