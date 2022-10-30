@@ -1,8 +1,11 @@
 use std::{collections::HashMap, fmt::Write};
-struct KeyValue {
-    key: String,
+
+enum KeyValue {
+    Bool(bool),
+    String(String),
 }
-struct Section {
+
+pub struct Section {
     name: String,
     items: HashMap<u64, KeyValue>,
 }
@@ -568,7 +571,10 @@ impl ParserObject<'_> {
     fn parse_key_name(&mut self, index: usize) -> Result<usize, String> {
         let next = self.parse_same_type(index);
         if self.current_section.is_none() {
-            self.current_section = Some(Section { name: String::new(), items: HashMap::new() });
+            self.current_section = Some(Section {
+                name: String::new(),
+                items: HashMap::new(),
+            });
         }
         let hash = compute_string_hash(&self.buf[index..next]);
         let sect = self.current_section.as_mut().unwrap();
@@ -577,7 +583,7 @@ impl ParserObject<'_> {
                 "Key already exists in current section",
                 index,
                 next,
-            ));        
+            ));
         }
         self.current_key = Some(&self.buf[index..next]);
         self.current_key_hash = hash;
@@ -660,4 +666,37 @@ impl Ini {
         p.parse()?;
         Ok(i)
     }
+    
+    #[inline]
+    pub fn has_section(&self, name: &str) -> bool {
+        let hash = compute_string_hash(name.as_bytes());
+        return self.sections.contains_key(&hash);
+    }
+
+    #[inline]
+    pub fn has_default_section(&self) -> bool {
+        return self.sections.contains_key(&0);
+    }    
+
+    #[inline]
+    pub fn get_mut_section(&mut self, name: &str) -> Option<&mut Section> {
+        let hash = compute_string_hash(name.as_bytes());
+        return self.sections.get_mut(&hash);
+    }
+
+    #[inline]
+    pub fn get_section(&self, name: &str) -> Option<&Section> {
+        let hash = compute_string_hash(name.as_bytes());
+        return self.sections.get(&hash);
+    }
+
+    #[inline]
+    pub fn get_default_section(&self, name: &str) -> Option<&Section> {
+        return self.sections.get(&0);
+    }    
+
+    #[inline]
+    pub fn get_mut_default_section(&mut self, name: &str) -> Option<&Section> {
+        return self.sections.get_mut(&0);
+    }      
 }

@@ -10,6 +10,9 @@ fn main() {
     ",
     );
     if i.is_err() {
-        println!("{:?}",i.err().unwrap());
+        println!("{}",i.err().unwrap());
+        return;
     }
+    let ini = i.ok().unwrap();
+    let s = ini.get_section("section").unwrap();
 }
