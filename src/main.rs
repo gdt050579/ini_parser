@@ -28,4 +28,7 @@ fn main() {
     println!("Name = {} with {} keys",s.get_name(),s.get_key_count());
     println!("Section: {}", ini.get_sections_count(true));
     println!("Has default section: {}",ini.has_default_section());
+    for sect in &ini {
+        println!("Section: {}",sect.get_name());
+    }
 }

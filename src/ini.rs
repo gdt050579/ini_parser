@@ -1,4 +1,4 @@
-use std::{collections::HashMap, fmt::Write, ops::{Deref, Index}};
+use std::{collections::HashMap, fmt::Write};
 
 enum KeyValue {
     Bool(bool),
@@ -13,6 +13,7 @@ pub struct Ini {
     sections: HashMap<u64, Section>,
     has_default_section: bool,
 }
+
 
 #[derive(PartialEq, Debug)]
 enum Status {
@@ -717,12 +718,14 @@ impl Ini {
     }
 }
 
-// impl Iterator for Ini {
-//     type Item = &Section;
-//     fn next(&mut self) -> Option<Self::Item> {
-//         self.section.iter().next()
-//     }
-// }
+impl<'a> IntoIterator for &'a Ini {
+    type Item = &'a Section;
+    type IntoIter = std::collections::hash_map::Values<'a, u64, Section>;
+
+    fn into_iter(self) -> Self::IntoIter {
+        self.sections.values()
+    }
+}
 
 // impl Index<Option<&Section>> for Ini {
 //     type Output<'a> = Option<&'a Section>;
