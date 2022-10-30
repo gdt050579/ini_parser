@@ -1,4 +1,4 @@
-use std::{collections::HashMap, fmt::Write};
+use std::{collections::HashMap, fmt::Write, ops::Deref};
 
 enum KeyValue {
     Bool(bool),
@@ -11,6 +11,7 @@ pub struct Section {
 }
 pub struct Ini {
     sections: HashMap<u64, Section>,
+    has_default_section: bool,
 }
 
 #[derive(PartialEq, Debug)]
@@ -473,6 +474,9 @@ impl ParserObject<'_> {
         if self.current_section.is_some() {
             let sect = self.current_section.take().unwrap();
             self.ini.sections.insert(self.current_section_hash, sect);
+            if self.current_section_hash==0 {
+                self.ini.has_default_section = true;
+            }
             self.current_section_hash = 0;
         }
     }
@@ -650,6 +654,8 @@ impl ParserObject<'_> {
                 Status::ExpectValue => self.parse_for_value()?,
             }
         }
+        // all good --> insert current section into hash table
+        self.insert_current_section();
         Ok(())
     }
 }
@@ -658,6 +664,7 @@ impl Ini {
     pub fn new() -> Ini {
         Ini {
             sections: HashMap::with_capacity(4),
+            has_default_section: true,
         }
     }
     pub fn from<'a>(text: &'a str) -> Result<Ini, String> {
@@ -666,7 +673,7 @@ impl Ini {
         p.parse()?;
         Ok(i)
     }
-    
+
     #[inline]
     pub fn has_section(&self, name: &str) -> bool {
         let hash = compute_string_hash(name.as_bytes());
@@ -675,8 +682,8 @@ impl Ini {
 
     #[inline]
     pub fn has_default_section(&self) -> bool {
-        return self.sections.contains_key(&0);
-    }    
+        return self.has_default_section;
+    }
 
     #[inline]
     pub fn get_mut_section(&mut self, name: &str) -> Option<&mut Section> {
@@ -693,10 +700,33 @@ impl Ini {
     #[inline]
     pub fn get_default_section(&self, name: &str) -> Option<&Section> {
         return self.sections.get(&0);
-    }    
+    }
 
     #[inline]
-    pub fn get_mut_default_section(&mut self, name: &str) -> Option<&Section> {
+    pub fn get_mut_default_section(&mut self, name: &str) -> Option<&mut Section> {
         return self.sections.get_mut(&0);
-    }      
+    }
+
+    #[inline]
+    pub fn get_sections_count(&self, ignore_default_section: bool) -> usize {
+        if ignore_default_section && self.has_default_section {
+            return self.sections.len() - 1;
+        } else {
+            return self.sections.len();
+        }
+    }
+}
+
+// impl Iterator for Ini {
+//     type Item = &Section;
+//     fn next(&mut self) -> Option<Self::Item> {
+//         self.section.iter().next()
+//     }
+// }
+
+
+impl Section {
+    pub fn get_name(&self) -> &str {
+        return &self.name;
+    }
 }
