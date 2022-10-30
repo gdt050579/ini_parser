@@ -23,7 +23,7 @@ fn main() {
         println!("{}", i.err().unwrap());
         return;
     }
-    let ini = i.ok().unwrap();
+    let mut ini = i.ok().unwrap();
     let s = ini.get_section("section").unwrap();
     println!("Name = {} with {} keys",s.get_name(),s.get_key_count());
     println!("Section: {}", ini.get_sections_count(true));
@@ -32,5 +32,9 @@ fn main() {
         println!("Section: {}",sect.get_name());
     }
     println!("text = {}",ini["values"].get_name());
-    
+    ini["abc"].set("value", "123");
+    ini["abc"].set("value2", true);
+    for sect in &ini {
+        println!("Section: {}",sect.get_name());
+    } 
 }

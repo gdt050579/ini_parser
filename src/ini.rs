@@ -8,7 +8,21 @@ enum KeyValue {
     Bool(bool),
     String(String),
 }
-
+impl From<String> for KeyValue {
+    fn from(value: String) -> Self {
+        Self::String(value)
+    }
+}
+impl From<&str> for KeyValue {
+    fn from(value: &str) -> Self {
+        Self::String(String::from(value))
+    }
+}
+impl From<bool> for KeyValue {
+    fn from(value: bool) -> Self {
+        Self::Bool(value)
+    }
+}
 pub struct Section {
     name: String,
     items: HashMap<u64, KeyValue>,
@@ -460,7 +474,7 @@ impl ParserObject<'_> {
         // move current section to the hash_map (if any)
         self.insert_current_section();
         // create the new section
-        self.current_section = Some(Section::new(&self.text[start..end])); 
+        self.current_section = Some(Section::new(&self.text[start..end]));
         self.current_section_hash = section_hash;
         Ok(index)
     }
@@ -748,13 +762,13 @@ impl Section {
     fn new(name: &str) -> Section {
         Section {
             name: String::from(name),
-            items: HashMap::with_capacity(4)
+            items: HashMap::with_capacity(4),
         }
     }
     fn new_default() -> Section {
         Section {
             name: String::new(),
-            items: HashMap::with_capacity(4)           
+            items: HashMap::with_capacity(4),
         }
     }
     pub fn get_name(&self) -> &str {
@@ -762,5 +776,9 @@ impl Section {
     }
     pub fn get_key_count(&self) -> usize {
         return self.items.len();
+    }
+    pub fn set<T: Into<KeyValue>>(&mut self, key_name: &str, value: T) {
+        let hash = compute_string_hash(key_name.as_bytes());
+        self.items.insert(hash, value.into());
     }
 }
