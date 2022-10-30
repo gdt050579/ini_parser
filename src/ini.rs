@@ -1,4 +1,4 @@
-use std::{collections::HashMap, fmt::Write, ops::{Index}};
+use std::{collections::HashMap, fmt::Write, ops::{Index, IndexMut}};
 
 enum KeyValue {
     Bool(bool),
@@ -741,17 +741,16 @@ impl Index<&str> for Ini {
     }
 }
 
-// impl IndexMut<&str> for Ini {
-//     fn index_mut(&mut self, index: &str) -> &mut Self::Output {
-//         let hash = compute_string_hash(index.as_bytes());
-//         let res = self.sections.get_mut(&hash);
-//         if res.is_none()
-//         {
-//             panic!("Section {} is not found in the ini list of sections",index);
-//         }
-//         res.unwrap()
-//     }
-// }
+impl IndexMut<&str> for Ini {
+    fn index_mut(&mut self, index: &str) -> &mut Self::Output {
+        let hash = compute_string_hash(index.as_bytes());
+        let res = self.sections.entry(hash).or_insert(Section{
+            name: String::from(index),
+            items: HashMap::new(),
+        });
+        res
+    }
+}
 
 // impl Index<Option<&Section>> for Ini {
 //     type Output<'a> = Option<&'a Section>;
