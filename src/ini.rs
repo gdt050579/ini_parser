@@ -1,4 +1,8 @@
-use std::{collections::HashMap, fmt::Write, ops::{Index, IndexMut}};
+use std::{
+    collections::HashMap,
+    fmt::Write,
+    ops::{Index, IndexMut},
+};
 
 enum KeyValue {
     Bool(bool),
@@ -13,7 +17,6 @@ pub struct Ini {
     sections: HashMap<u64, Section>,
     has_default_section: bool,
 }
-
 
 #[derive(PartialEq, Debug)]
 enum Status {
@@ -457,10 +460,7 @@ impl ParserObject<'_> {
         // move current section to the hash_map (if any)
         self.insert_current_section();
         // create the new section
-        self.current_section = Some(Section {
-            name: String::from(&self.text[start..end]),
-            items: HashMap::with_capacity(4),
-        });
+        self.current_section = Some(Section::new(&self.text[start..end])); 
         self.current_section_hash = section_hash;
         Ok(index)
     }
@@ -475,7 +475,7 @@ impl ParserObject<'_> {
         if self.current_section.is_some() {
             let sect = self.current_section.take().unwrap();
             self.ini.sections.insert(self.current_section_hash, sect);
-            if self.current_section_hash==0 {
+            if self.current_section_hash == 0 {
                 self.ini.has_default_section = true;
             }
             self.current_section_hash = 0;
@@ -576,10 +576,7 @@ impl ParserObject<'_> {
     fn parse_key_name(&mut self, index: usize) -> Result<usize, String> {
         let next = self.parse_same_type(index);
         if self.current_section.is_none() {
-            self.current_section = Some(Section {
-                name: String::new(),
-                items: HashMap::new(),
-            });
+            self.current_section = Some(Section::new_default());
         }
         let hash = compute_string_hash(&self.buf[index..next]);
         let sect = self.current_section.as_mut().unwrap();
@@ -733,9 +730,8 @@ impl Index<&str> for Ini {
     fn index(&self, index: &str) -> &Self::Output {
         let hash = compute_string_hash(index.as_bytes());
         let res = self.sections.get(&hash);
-        if res.is_none()
-        {
-            panic!("Section {} is not found in the ini list of sections",index);
+        if res.is_none() {
+            panic!("Section {} is not found in the ini list of sections", index);
         }
         res.unwrap()
     }
@@ -744,21 +740,23 @@ impl Index<&str> for Ini {
 impl IndexMut<&str> for Ini {
     fn index_mut(&mut self, index: &str) -> &mut Self::Output {
         let hash = compute_string_hash(index.as_bytes());
-        let res = self.sections.entry(hash).or_insert(Section{
-            name: String::from(index),
-            items: HashMap::new(),
-        });
-        res
+        return self.sections.entry(hash).or_insert(Section::new(index));
     }
 }
 
-// impl Index<Option<&Section>> for Ini {
-//     type Output<'a> = Option<&'a Section>;
-//     fn index<'a>(&'a self, name: &str) -> Self::Output {
-//         self.get_section(name)
-//     }
-// }
 impl Section {
+    fn new(name: &str) -> Section {
+        Section {
+            name: String::from(name),
+            items: HashMap::with_capacity(4)
+        }
+    }
+    fn new_default() -> Section {
+        Section {
+            name: String::new(),
+            items: HashMap::with_capacity(4)           
+        }
+    }
     pub fn get_name(&self) -> &str {
         return &self.name;
     }
