@@ -1,4 +1,4 @@
-use std::{collections::HashMap, fmt::Write, ops::Deref};
+use std::{collections::HashMap, fmt::Write, ops::{Deref, Index}};
 
 enum KeyValue {
     Bool(bool),
@@ -724,9 +724,17 @@ impl Ini {
 //     }
 // }
 
-
+// impl Index<Option<&Section>> for Ini {
+//     type Output<'a> = Option<&'a Section>;
+//     fn index<'a>(&'a self, name: &str) -> Self::Output {
+//         self.get_section(name)
+//     }
+// }
 impl Section {
     pub fn get_name(&self) -> &str {
         return &self.name;
+    }
+    pub fn get_key_count(&self) -> usize {
+        return self.items.len();
     }
 }
