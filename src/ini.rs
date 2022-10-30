@@ -1,4 +1,4 @@
-use std::{collections::HashMap, fmt::Write};
+use std::{collections::HashMap, fmt::Write, ops::Index};
 
 enum KeyValue {
     Bool(bool),
@@ -724,6 +724,20 @@ impl<'a> IntoIterator for &'a Ini {
 
     fn into_iter(self) -> Self::IntoIter {
         self.sections.values()
+    }
+}
+
+impl Index<&str> for Ini {
+    type Output = Section;
+
+    fn index(&self, index: &str) -> &Self::Output {
+        let hash = compute_string_hash(index.as_bytes());
+        let res = self.sections.get(&hash);
+        if res.is_none()
+        {
+            panic!("Section {} is not found in the ini list of sections",index);
+        }
+        res.unwrap()
     }
 }
 
