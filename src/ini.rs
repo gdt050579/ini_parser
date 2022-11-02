@@ -4,9 +4,16 @@ use std::{
     ops::{Index, IndexMut},
 };
 
+enum NumberValue {
+    UInt64(u64),
+    Int64(i64),
+    Float64(f64),
+}
 enum KeyValue {
     Bool(bool),
     String(String),
+    Number(NumberValue),
+    Array(Vec<KeyValue>),
 }
 impl From<String> for KeyValue {
     fn from(value: String) -> Self {
@@ -403,6 +410,73 @@ impl ParserObject<'_> {
         CHAR_TYPE[self.buf[index] as usize]
     }
     #[inline]
+    fn value_to_bool(&self, start: usize, end: usize) -> Option<bool> {
+        let mut sz = end - start;
+        if (sz < 2) || (sz > 5) {
+            return None;
+        }
+        // possible values: TRUE  = true, on, yes
+        //                : FALSE = false, off, no
+        match self.buf[start] | 0x20u8 {
+            b't' => {
+                if (sz == 4)
+                    && (self.buf[start + 1] | 0x20 == b'r')
+                    && (self.buf[start + 2] | 0x20 == b'u')
+                    && (self.buf[start + 3] | 0x20 == b'e')
+                {
+                    return Some(true);
+                } // true
+            }
+            b'y' => {
+                if (sz == 3)
+                    && (self.buf[start + 1] | 0x20 == b'e')
+                    && (self.buf[start + 2] | 0x20 == b's')
+                {
+                    return Some(true);
+                } // yes
+            }
+            b'o' => {
+                match sz {
+                    2 => {
+                        if self.buf[start + 1] | 0x20 == b'n' {
+                            return Some(true);
+                        } // on
+                    }
+                    3 => {
+                        if (self.buf[start + 1] | 0x20 == b'f')
+                            && (self.buf[start + 2] | 0x20 == b'f')
+                        {
+                            return Some(false);
+                        } // off
+                    }
+                    _ => {
+                        return None;
+                    }
+                }
+            }
+            b'n' => {
+                if (sz == 2) && ((self.buf[start + 1] | 0x20) == b'o') {
+                    return Some(false);
+                } // no
+            }
+            b'f' => {
+                if (sz == 5)
+                    && (self.buf[start + 1] | 0x20 == b'a')
+                    && (self.buf[start + 2] | 0x20 == b'l')
+                    && (self.buf[start + 3] | 0x20 == b's')
+                    && (self.buf[start + 4] | 0x20 == b'e')
+                {
+                    return Some(false);
+                } // false
+            }
+
+            _ => {
+                return None;
+            }
+        }
+        return None;
+    }
+    #[inline]
     fn parse_same_type(&mut self, mut index: usize) -> usize {
         let ctype = self.get_char_type(index);
         while (index < self.buf.len()) && (self.get_char_type(index) == ctype) {
@@ -480,8 +554,19 @@ impl ParserObject<'_> {
     }
 
     #[inline]
-    fn add_value(&mut self, start: usize, end: usize) {
+    fn add_value(&mut self, start: usize, end: usize, stringValue: bool) {
         println!("Value = {}", &self.text[start..end]);
+        if stringValue {
+            // we have a string
+            return;
+        }
+        // check if it is a bool value
+        if let Some(result) = self.value_to_bool(start, end) {
+            return;
+        }
+        // check if it a numerical value
+        
+        // if none of the above --> consider a string
     }
 
     #[inline]
@@ -554,11 +639,11 @@ impl ParserObject<'_> {
             && (self.buf[index + 2] == quote_char)
         {
             let next = self.parse_three_quotes_string(index)?;
-            self.add_value(index + 3, next - 3);
+            self.add_value(index + 3, next - 3, true);
             index = next;
         } else {
             let next = self.parse_single_quote_string(index)?;
-            self.add_value(index + 1, next - 1);
+            self.add_value(index + 1, next - 1, true);
             index = next;
         }
         Ok(index)
@@ -582,7 +667,7 @@ impl ParserObject<'_> {
         }
         index += 1;
         // now we have a value between start and index
-        self.add_value(start, index);
+        self.add_value(start, index, false);
         Ok(index)
     }
 
