@@ -30,6 +30,10 @@ fn main() {
     println!("Has default section: {}",ini.has_default_section());
     for sect in &ini {
         println!("Section: {}",sect.get_name());
+        for value in sect {
+            println!("  {} = ",value.get_name());
+        }
+        println!("");
     }
     println!("text = {}",ini["values"].get_name());
     ini["abc"].set("value", "123");

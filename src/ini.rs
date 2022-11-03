@@ -30,7 +30,7 @@ impl From<bool> for Value {
         Self::Bool(value)
     }
 }
-struct KeyValue {
+pub struct KeyValue {
     name: String,
     value: Value,
 }
@@ -418,7 +418,7 @@ impl ParserObject<'_> {
         let sz = end - start;
         if (sz < 2) || (sz > 5) {
             return None;
-        }
+        }        
         // possible values: TRUE  = true, on, yes
         //                : FALSE = false, off, no
         match self.buf[start] | 0x20u8 {
@@ -559,7 +559,6 @@ impl ParserObject<'_> {
 
     #[inline]
     fn add_value(&mut self, start: usize, end: usize, stringValue: bool) {
-        println!("Value = {}", &self.text[start..end]);
         
         if stringValue {
             let c_sect = self.current_section.as_mut().unwrap();
@@ -581,6 +580,11 @@ impl ParserObject<'_> {
         // check if it a numerical value
 
         // if none of the above --> consider a string
+        let c_sect = self.current_section.as_mut().unwrap();
+        c_sect.items.insert(
+            self.current_key_hash,
+            KeyValue::new_string(self.current_key.unwrap(), &self.text[start..end]),
+        );        
     }
 
     #[inline]
@@ -837,6 +841,15 @@ impl<'a> IntoIterator for &'a Ini {
     }
 }
 
+impl<'a> IntoIterator for &'a Section {
+    type Item = &'a KeyValue;
+    type IntoIter = std::collections::hash_map::Values<'a, u64, KeyValue>;
+
+    fn into_iter(self) -> Self::IntoIter {
+        self.items.values()
+    }
+}
+
 impl Index<&str> for Ini {
     type Output = Section;
 
@@ -869,6 +882,9 @@ impl KeyValue {
             name: String::from(name),
             value: Value::Bool(value),
         }
+    }
+    pub fn get_name(&self) -> &str {
+        return &self.name;
     }
 }
 
