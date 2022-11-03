@@ -4,7 +4,8 @@ use std::{
     ops::{Index, IndexMut},
 };
 
-enum NumericalValue {
+enum Number {
+    Invalid,
     UInt64(u64),
     Int64(i64),
     Float64(f64),
@@ -12,7 +13,9 @@ enum NumericalValue {
 enum Value {
     Bool(bool),
     String(String),
-    Number(NumericalValue),
+    UInt64(u64),
+    Int64(i64),
+    Float64(f64),
     Array(Vec<Value>),
 }
 impl From<String> for Value {
@@ -418,7 +421,7 @@ impl ParserObject<'_> {
         let sz = end - start;
         if (sz < 2) || (sz > 5) {
             return None;
-        }        
+        }
         // possible values: TRUE  = true, on, yes
         //                : FALSE = false, off, no
         match self.buf[start] | 0x20u8 {
@@ -480,6 +483,95 @@ impl ParserObject<'_> {
         }
         return None;
     }
+    #[inline]
+    fn hex_to_number(&self, start: usize, end: usize, signed: bool) -> Number {
+        // this is a hex number
+        let mut value = 0u64;
+        let mut idx = start;
+        while idx < end {
+            let ch = self.buf[idx];
+            idx += 1;
+            match ch {
+                b'0'..=b'9' => value = value << 4 + ((ch - b'0') as u64),
+                b'A'..=b'F' => value = value << 4 + ((ch - 55) as u64),
+                b'a'..=b'f' => value = value << 4 + ((ch - 87) as u64),
+                _ => return Number::Invalid,
+            }
+        }
+        if signed {
+            return Number::Int64(-(value as i64));
+        } else {
+            return Number::UInt64(value);
+        }
+    }
+    #[inline]
+    fn dec_to_number(&self, start: usize, end: usize, signed: bool) -> Number {
+        // this is a decimal number
+        let mut supraunitar = 0u64;
+        let mut subunitar = 0f64;
+        let mut float_idx = 10f64;
+        let mut has_subunitar = false;
+        let mut idx = start;
+        while idx < end {
+            let ch = self.buf[idx];
+            idx += 1;
+            match ch {
+                b'0'..=b'9' => {
+                    if has_subunitar {
+                        subunitar += ((ch - b'0') as f64) / float_idx;
+                        float_idx *= 10f64;
+                    } else {
+                        supraunitar = (supraunitar * 10) + ((ch - b'0') as u64);
+                    }
+                }
+                b'.' => {
+                    if has_subunitar {
+                        return Number::Invalid;
+                    } else {
+                        has_subunitar = true;
+                    }
+                }
+                _ => return Number::Invalid,
+            }
+        }
+        if has_subunitar {
+            if signed {
+                return Number::Float64(-((supraunitar as f64) + subunitar));
+            } else {
+                return Number::Float64((supraunitar as f64) + subunitar);
+            }
+        } else {
+            if signed {
+                return Number::Int64(-(supraunitar as i64));
+            } else {
+                return Number::UInt64(supraunitar);
+            }
+        }
+    }
+    #[inline]
+    fn value_to_number(&self, start: usize, end: usize) -> Number {
+        // check to see if this is a possible number
+        let mut is_negative = false;
+        let mut pos = start;
+        match self.buf[pos] {
+            b'+' => pos += 1,
+            b'-' => {
+                is_negative = true;
+                pos += 1;
+            }
+            _ => {}
+        }
+        if pos >= end {
+            return Number::Invalid;
+        }
+        if (pos + 2 < end) && (self.buf[pos] == b'0') && ((self.buf[pos + 1] | 0x20) == b'x') {
+            // a hexazecimal number
+            return self.hex_to_number(pos + 2, end, is_negative);
+        }
+        // consider a decimal number
+        return self.dec_to_number(pos, end, is_negative);
+    }
+
     #[inline]
     fn parse_same_type(&mut self, mut index: usize) -> usize {
         let ctype = self.get_char_type(index);
@@ -558,9 +650,8 @@ impl ParserObject<'_> {
     }
 
     #[inline]
-    fn add_value(&mut self, start: usize, end: usize, stringValue: bool) {
-        
-        if stringValue {
+    fn add_value(&mut self, start: usize, end: usize, force_string: bool) {
+        if force_string {
             let c_sect = self.current_section.as_mut().unwrap();
             c_sect.items.insert(
                 self.current_key_hash,
@@ -578,13 +669,26 @@ impl ParserObject<'_> {
             return;
         }
         // check if it a numerical value
-
-        // if none of the above --> consider a string
+        let number = self.value_to_number(start, end);
         let c_sect = self.current_section.as_mut().unwrap();
-        c_sect.items.insert(
-            self.current_key_hash,
-            KeyValue::new_string(self.current_key.unwrap(), &self.text[start..end]),
-        );        
+        match number {
+            Number::UInt64(value) => c_sect.items.insert(
+                self.current_key_hash,
+                KeyValue::new_u64(self.current_key.unwrap(), value),
+            ),
+            Number::Int64(value) => c_sect.items.insert(
+                self.current_key_hash,
+                KeyValue::new_i64(self.current_key.unwrap(), value),
+            ),
+            Number::Float64(value) => c_sect.items.insert(
+                self.current_key_hash,
+                KeyValue::new_f64(self.current_key.unwrap(), value),
+            ),
+            _ => c_sect.items.insert(
+                self.current_key_hash,
+                KeyValue::new_string(self.current_key.unwrap(), &self.text[start..end]),
+            ),
+        };
     }
 
     #[inline]
@@ -871,6 +975,24 @@ impl IndexMut<&str> for Ini {
 }
 
 impl KeyValue {
+    fn new_u64(name: &str, value: u64) -> KeyValue {
+        KeyValue {
+            name: String::from(name),
+            value: Value::UInt64(value),
+        }
+    }
+    fn new_i64(name: &str, value: i64) -> KeyValue {
+        KeyValue {
+            name: String::from(name),
+            value: Value::Int64(value),
+        }
+    }
+    fn new_f64(name: &str, value: f64) -> KeyValue {
+        KeyValue {
+            name: String::from(name),
+            value: Value::Float64(value),
+        }
+    }
     fn new_string(name: &str, value: &str) -> KeyValue {
         KeyValue {
             name: String::from(name),
@@ -915,6 +1037,6 @@ impl Section {
                 name: String::from(key_name),
                 value: value.into(),
             },
-        ); 
+        );
     }
 }
