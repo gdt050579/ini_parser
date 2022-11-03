@@ -10,7 +10,8 @@ enum Number {
     Int64(i64),
     Float64(f64),
 }
-enum Value {
+#[derive(Debug)]
+pub enum Value {
     Bool(bool),
     String(String),
     UInt64(u64),
@@ -1007,6 +1008,9 @@ impl KeyValue {
     }
     pub fn get_name(&self) -> &str {
         return &self.name;
+    }
+    pub fn get_value(&self) -> &Value {
+        return &self.value;
     }
 }
 

@@ -31,7 +31,7 @@ fn main() {
     for sect in &ini {
         println!("Section: {}",sect.get_name());
         for value in sect {
-            println!("  {} = ",value.get_name());
+            println!("  {} = {:?}",value.get_name(),value.get_value());
         }
         println!("");
     }
