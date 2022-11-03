@@ -4,31 +4,35 @@ use std::{
     ops::{Index, IndexMut},
 };
 
-enum NumberValue {
+enum NumericalValue {
     UInt64(u64),
     Int64(i64),
     Float64(f64),
 }
-enum KeyValue {
+enum Value {
     Bool(bool),
     String(String),
-    Number(NumberValue),
-    Array(Vec<KeyValue>),
+    Number(NumericalValue),
+    Array(Vec<Value>),
 }
-impl From<String> for KeyValue {
+impl From<String> for Value {
     fn from(value: String) -> Self {
         Self::String(value)
     }
 }
-impl From<&str> for KeyValue {
+impl From<&str> for Value {
     fn from(value: &str) -> Self {
         Self::String(String::from(value))
     }
 }
-impl From<bool> for KeyValue {
+impl From<bool> for Value {
     fn from(value: bool) -> Self {
         Self::Bool(value)
     }
+}
+struct KeyValue {
+    name: String,
+    value: Value,
 }
 pub struct Section {
     name: String,
@@ -357,7 +361,7 @@ struct ParserObject<'a> {
     text: &'a str,
     current_section: Option<Section>,
     current_section_hash: u64,
-    current_key: Option<&'a [u8]>,
+    current_key: Option<&'a str>,
     current_key_hash: u64,
 }
 
@@ -376,7 +380,7 @@ impl ParserObject<'_> {
         }
     }
 
-    fn build_error_message(&mut self, message: &str, start: usize, end: usize) -> String {
+    fn build_error_message(&mut self, message: &str, start: usize, _end: usize) -> String {
         let mut result = String::with_capacity(256);
         result.push_str(message);
         result.push_str("\n");
@@ -411,7 +415,7 @@ impl ParserObject<'_> {
     }
     #[inline]
     fn value_to_bool(&self, start: usize, end: usize) -> Option<bool> {
-        let mut sz = end - start;
+        let sz = end - start;
         if (sz < 2) || (sz > 5) {
             return None;
         }
@@ -556,16 +560,26 @@ impl ParserObject<'_> {
     #[inline]
     fn add_value(&mut self, start: usize, end: usize, stringValue: bool) {
         println!("Value = {}", &self.text[start..end]);
+        
         if stringValue {
-            // we have a string
+            let c_sect = self.current_section.as_mut().unwrap();
+            c_sect.items.insert(
+                self.current_key_hash,
+                KeyValue::new_string(self.current_key.unwrap(), &self.text[start..end]),
+            );
             return;
         }
         // check if it is a bool value
         if let Some(result) = self.value_to_bool(start, end) {
+            let c_sect = self.current_section.as_mut().unwrap();
+            c_sect.items.insert(
+                self.current_key_hash,
+                KeyValue::new_bool(self.current_key.unwrap(), result),
+            );
             return;
         }
         // check if it a numerical value
-        
+
         // if none of the above --> consider a string
     }
 
@@ -686,7 +700,7 @@ impl ParserObject<'_> {
                 next,
             ));
         }
-        self.current_key = Some(&self.buf[index..next]);
+        self.current_key = Some(&self.text[index..next]);
         self.current_key_hash = hash;
         self.status = Status::ExpectAssign;
         Ok(next)
@@ -795,12 +809,12 @@ impl Ini {
     }
 
     #[inline]
-    pub fn get_default_section(&self, name: &str) -> Option<&Section> {
+    pub fn get_default_section(&self) -> Option<&Section> {
         return self.sections.get(&0);
     }
 
     #[inline]
-    pub fn get_mut_default_section(&mut self, name: &str) -> Option<&mut Section> {
+    pub fn get_mut_default_section(&mut self) -> Option<&mut Section> {
         return self.sections.get_mut(&0);
     }
 
@@ -843,6 +857,21 @@ impl IndexMut<&str> for Ini {
     }
 }
 
+impl KeyValue {
+    fn new_string(name: &str, value: &str) -> KeyValue {
+        KeyValue {
+            name: String::from(name),
+            value: Value::String(String::from(value)),
+        }
+    }
+    fn new_bool(name: &str, value: bool) -> KeyValue {
+        KeyValue {
+            name: String::from(name),
+            value: Value::Bool(value),
+        }
+    }
+}
+
 impl Section {
     fn new(name: &str) -> Section {
         Section {
@@ -862,8 +891,14 @@ impl Section {
     pub fn get_key_count(&self) -> usize {
         return self.items.len();
     }
-    pub fn set<T: Into<KeyValue>>(&mut self, key_name: &str, value: T) {
+    pub fn set<T: Into<Value>>(&mut self, key_name: &str, value: T) {
         let hash = compute_string_hash(key_name.as_bytes());
-        self.items.insert(hash, value.into());
+        self.items.insert(
+            hash,
+            KeyValue {
+                name: String::from(key_name),
+                value: value.into(),
+            },
+        ); 
     }
 }
