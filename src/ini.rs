@@ -780,6 +780,7 @@ impl ParserObject<'_> {
         while index < self.buf.len() {
             let ch_type = self.get_char_type(index);
             if (ch_type == CharType::NewLine) || (ch_type == CharType::Comment) {
+                index -= 1;
                 break;
             }
             index += 1;
