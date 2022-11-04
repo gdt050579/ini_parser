@@ -25,7 +25,7 @@ fn main() {
     }
     let mut ini = i.ok().unwrap();
     let s = ini.get_section("section").unwrap();
-    println!("Name = {} with {} keys",s.get_name(),s.get_key_count());
+    println!("Name = {} with {} keys",s.get_name(),s.get_keys_count());
     println!("Section: {}", ini.get_sections_count(true));
     println!("Has default section: {}",ini.has_default_section());
     for sect in &ini {

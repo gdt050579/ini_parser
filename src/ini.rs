@@ -1028,12 +1028,23 @@ impl Section {
             items: HashMap::with_capacity(4),
         }
     }
+    
+    #[inline]
     pub fn get_name(&self) -> &str {
         return &self.name;
     }
-    pub fn get_key_count(&self) -> usize {
+
+    #[inline]
+    pub fn get_keys_count(&self) -> usize {
         return self.items.len();
     }
+
+    #[inline]
+    pub fn has_key(&self, name: &str) -> bool {
+        let hash = compute_string_hash(name.as_bytes());
+        return self.items.contains_key(&hash);
+    }
+
     pub fn set<T: Into<Value>>(&mut self, key_name: &str, value: T) {
         let hash = compute_string_hash(key_name.as_bytes());
         self.items.insert(
