@@ -38,7 +38,10 @@ fn main() {
     println!("text = {}",ini["values"].get_name());
     ini["abc"].set("value", "123");
     ini["abc"].set("value2", true);
+    println!("ini[abc][value] = {:?}",ini.get_section("abc").unwrap().get("value"));
+    println!("ini[abc][value2] = {:?}",ini.get_value("abc", "value2"));
     for sect in &ini {
         println!("Section: {}",sect.get_name());
     } 
+
 }

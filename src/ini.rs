@@ -936,6 +936,15 @@ impl Ini {
             return self.sections.len();
         }
     }
+
+    #[inline]
+    pub fn get_value(&self, section_name: &str, key_name: &str) -> Option<&Value> {
+        if let Some(s) = self.get_section(section_name) {
+            return s.get(key_name);
+        } else {
+            return None;
+        }
+    }
 }
 
 impl<'a> IntoIterator for &'a Ini {
@@ -1028,7 +1037,7 @@ impl Section {
             items: HashMap::with_capacity(4),
         }
     }
-    
+
     #[inline]
     pub fn get_name(&self) -> &str {
         return &self.name;
@@ -1054,5 +1063,14 @@ impl Section {
                 value: value.into(),
             },
         );
+    }
+
+    pub fn get(&self, key_name: &str) -> Option<&Value> {
+        let hash = compute_string_hash(key_name.as_bytes());
+        let kv = self.items.get(&hash);
+        if let Some(value) = kv {
+            return Some(&value.value);
+        }
+        return None;
     }
 }
