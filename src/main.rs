@@ -1,5 +1,6 @@
 mod ini;
 
+
 fn main() {
     let i = ini::Ini::from(
         "
