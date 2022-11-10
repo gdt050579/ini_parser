@@ -3,6 +3,7 @@ mod value;
 mod section;
 mod hash_utils;
 mod parser;
+mod tests;
 
 use std::collections::HashMap;
 use std::fs::File;

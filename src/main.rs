@@ -44,5 +44,5 @@ fn main() {
     for sect in &ini {
         println!("Section: {}",sect.get_name());
     } 
-
+    
 }

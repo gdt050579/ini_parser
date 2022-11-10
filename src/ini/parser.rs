@@ -1,8 +1,8 @@
-use std::fmt::Write;
-use super::section::Section;
-use super::key_value::KeyValue;
 use super::hash_utils::*;
+use super::key_value::KeyValue;
+use super::section::Section;
 use super::Ini;
+use std::fmt::Write;
 
 enum Number {
     Invalid,
@@ -290,8 +290,6 @@ const CHAR_TYPE: [CharType; 256] = [
     CharType::Word,
     CharType::Word,
 ];
-
-
 
 pub(super) struct ParserObject<'a> {
     status: Status,
@@ -720,6 +718,9 @@ impl ParserObject<'_> {
                 break;
             }
             index += 1;
+        }
+        if index >= self.buf.len() {
+            index = self.buf.len() - 1;
         }
         // trim any extra spaces from the end
         while (index > start) && (self.get_char_type(index) == CharType::Space) {
