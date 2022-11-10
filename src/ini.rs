@@ -5,7 +5,10 @@ mod hash_utils;
 mod parser;
 
 use std::collections::HashMap;
+use std::fs::File;
+use std::io::Read;
 use std::ops::{Index, IndexMut};
+use std::path::Path;
 use self::value::Value;
 use self::section::Section;
 use self::hash_utils::*;
@@ -29,6 +32,20 @@ impl Ini {
         let mut p = ParserObject::new(&mut i, text);
         p.parse()?;
         Ok(i)
+    }
+    pub fn from_file(path: &Path)->Result<Ini,String> {
+        let result = File::open(path);
+        if result.is_err() {
+            return Err("Fail to load file !".to_string());
+        } else {
+            let mut f = result.unwrap();
+            let mut text = String::with_capacity(4096);
+            if f.read_to_string(&mut text).is_ok() {
+                return Ini::from(text.as_str());
+            } else {
+                return Err("Fail to read content".to_string());
+            }
+        }
     }
 
     #[inline]
