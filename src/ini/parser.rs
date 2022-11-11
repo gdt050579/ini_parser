@@ -427,9 +427,9 @@ impl ParserObject<'_> {
             let ch = self.buf[idx];
             idx += 1;
             match ch {
-                b'0'..=b'9' => value = value << 4 + ((ch - b'0') as u64),
-                b'A'..=b'F' => value = value << 4 + ((ch - 55) as u64),
-                b'a'..=b'f' => value = value << 4 + ((ch - 87) as u64),
+                b'0'..=b'9' => value = (value << 4) + ((ch - b'0') as u64),
+                b'A'..=b'F' => value = (value << 4) + ((ch - 55) as u64),
+                b'a'..=b'f' => value = (value << 4) + ((ch - 87) as u64),
                 _ => return Number::Invalid,
             }
         }
