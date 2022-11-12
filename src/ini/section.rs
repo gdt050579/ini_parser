@@ -1,21 +1,22 @@
-use std::collections::HashMap;
+use super::entry::Entry;
+use super::hash_utils::*;
 use super::key_value::KeyValue;
 use super::value::Value;
-use super::hash_utils::*;
+use std::collections::HashMap;
 
 pub struct Section {
-    pub (super) name: String,
-    pub (super) items: HashMap<u64, KeyValue>,
+    pub(super) name: String,
+    pub(super) items: HashMap<u64, KeyValue>,
 }
 
 impl Section {
-    pub (super) fn new(name: &str) -> Section {
+    pub(super) fn new(name: &str) -> Section {
         Section {
             name: String::from(name),
             items: HashMap::with_capacity(4),
         }
     }
-    pub (super) fn new_default() -> Section {
+    pub(super) fn new_default() -> Section {
         Section {
             name: String::new(),
             items: HashMap::with_capacity(4),
@@ -49,13 +50,19 @@ impl Section {
         );
     }
 
-    pub fn get(&self, key_name: &str) -> Option<&Value> {
+    pub fn get_value(&self, key_name: &str) -> Option<&Value> {
         let hash = compute_string_hash(key_name.as_bytes());
         let kv = self.items.get(&hash);
         if let Some(value) = kv {
             return Some(&value.value);
         }
         return None;
+    }
+    pub fn get(&self, key_name: &str) -> Entry {
+        let hash = compute_string_hash(key_name.as_bytes());
+        Entry {
+            data: self.items.get(&hash),
+        }
     }
 }
 

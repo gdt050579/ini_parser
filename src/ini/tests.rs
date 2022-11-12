@@ -18,9 +18,9 @@ fn check_bool_value() {
     let sect = ini.get_section("Section");
     assert!(sect.is_some(),"Unable to found section [Section]");
     let sect = sect.unwrap();    
-    assert_eq!(sect.get("true_value"),Some(&Value::Bool(true)));
-    assert_eq!(sect.get("false_value"),Some(&Value::Bool(false)));
-    assert_eq!(sect.get("sone_value"),None);
+    assert_eq!(sect.get_value("true_value"),Some(&Value::Bool(true)));
+    assert_eq!(sect.get_value("false_value"),Some(&Value::Bool(false)));
+    assert_eq!(sect.get_value("sone_value"),None);
 }
 
 #[test]
@@ -31,13 +31,13 @@ fn check_int_value() {
     let sect = ini.get_section("Section");
     assert!(sect.is_some(),"Unable to found section [Section]");
     let sect = sect.unwrap();    
-    assert_eq!(sect.get("v1"),Some(&Value::UInt64(100)));
-    assert_eq!(sect.get("v2"),Some(&Value::Int64(-100)));
-    assert_eq!(sect.get("v3"),Some(&Value::UInt64(0)));
-    assert_eq!(sect.get("v4"),Some(&Value::UInt64(0xFF)));
-    assert_eq!(sect.get("v5"),Some(&Value::UInt64(12345678)));
-    assert_eq!(sect.get("v6"),Some(&Value::UInt64(0x1122334455667788)));
-    assert_eq!(sect.get("sone_value"),None);
+    assert_eq!(sect.get_value("v1"),Some(&Value::UInt64(100)));
+    assert_eq!(sect.get_value("v2"),Some(&Value::Int64(-100)));
+    assert_eq!(sect.get_value("v3"),Some(&Value::UInt64(0)));
+    assert_eq!(sect.get_value("v4"),Some(&Value::UInt64(0xFF)));
+    assert_eq!(sect.get_value("v5"),Some(&Value::UInt64(12345678)));
+    assert_eq!(sect.get_value("v6"),Some(&Value::UInt64(0x1122334455667788)));
+    assert_eq!(sect.get_value("sone_value"),None);
 }
 
 #[test]

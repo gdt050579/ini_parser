@@ -1,5 +1,6 @@
 use super::value::Value;
 
+#[derive(Debug)]
 pub struct KeyValue {
     pub (super) name: String,
     pub (super) value: Value,

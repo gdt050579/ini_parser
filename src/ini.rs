@@ -5,6 +5,7 @@ mod parser;
 mod section;
 mod tests;
 mod value;
+mod entry;
 
 use self::error::Error;
 use self::hash_utils::*;
@@ -104,7 +105,7 @@ impl Ini {
     #[inline]
     pub fn get_value(&self, section_name: &str, key_name: &str) -> Option<&Value> {
         if let Some(s) = self.get_section(section_name) {
-            return s.get(key_name);
+            return s.get_value(key_name);
         } else {
             return None;
         }
