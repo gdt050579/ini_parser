@@ -20,6 +20,7 @@ impl Error {
         // we need to compute the line number
         let mut index = 0usize;
         let mut line_number = 1u32;
+        let mut line_start = 0usize;
         while (index < start) && (index < buf.len()) {
             if Error::is_eol_char(buf[index]) {
                 line_number += 1;
@@ -30,9 +31,39 @@ impl Error {
                         index += 1;
                     }
                 }
+                line_start = index;
             } else {
                 index += 1;
             }
+        }
+        index = line_start;
+        while (index < buf.len()) && (!Error::is_eol_char(buf[index])) {
+            index+=1;
+        }
+        if let Ok(txt) = std::str::from_utf8(&buf[line_start..index])
+        {
+            // add text to string, but convert tabs (\t) into spaces
+            for ch in txt.chars() {
+                if ch=='\t' {
+                    err.message.push(' ');
+                } else {
+                    err.message.push(ch);
+                }
+            }
+            err.message.push('\n');
+            // mark the error
+            let min_ofs = start - line_start;
+            let max_ofs = end - line_start;
+            for (index,_) in txt.char_indices() {
+                if (index>=min_ofs) && (index<max_ofs) {
+                    err.message.push('^');
+                } else {
+                    err.message.push(' ');
+                }
+            }
+            err.message.push('\n');
+        } else {
+            err.message.push_str("Error: <Fail to convert INI content to UTF-8>\n");
         }
         err.message.push_str("Line number: ");
         err.message

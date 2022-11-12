@@ -6,7 +6,7 @@ fn main() {
         "
     default_value = 100
 
-    [section] ; my section
+    [section ; my section
     compute = 'some value'
     value = 100
 
