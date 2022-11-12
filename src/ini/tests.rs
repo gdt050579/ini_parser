@@ -48,3 +48,15 @@ fn check_incomplete_section_name() {
     assert!(err.get_line_number()==1,"Error should have happen at line 1");
     assert!(err.get_error_message().starts_with("Expecting a ']' character to finish the section !\n[incomplete_section\n ^^^^^^^^^^^^^^^^^^"));
 }
+
+#[test]
+fn check_get_for_i32() {
+    let i = Ini::from("[section]\nv1 = 100");
+    assert!(i.is_ok(),"Fail to initialized ini object");
+    let ini = i.unwrap();
+    let sect = ini.get_section("Section");
+    assert!(sect.is_some(),"Unable to found section [Section]");
+    let sect = sect.unwrap();   
+    assert!(sect.get("v1").or_else(0)==100,"Fail to validate v1=100");
+    assert!(sect.get("v2").or_else(123)==123,"Fail to validate v2=123");
+}
