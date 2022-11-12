@@ -39,3 +39,12 @@ fn check_int_value() {
     assert_eq!(sect.get("v6"),Some(&Value::UInt64(0x1122334455667788)));
     assert_eq!(sect.get("sone_value"),None);
 }
+
+#[test]
+fn check_incomplete_section_name() {
+    let i = Ini::from("[incomplete_section\nv1 = 100");
+    assert!(i.is_err(),"This code should have not been validated !");
+    let err = i.err().unwrap();
+    assert!(err.get_line_number()==1,"Error should have happen at line 1");
+    assert!(err.get_error_message().starts_with("Expecting a ']' character to finish the section !\n[incomplete_section\n ^^^^^^^^^^^^^^^^^^"));
+}
