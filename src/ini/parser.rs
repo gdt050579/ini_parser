@@ -1,8 +1,8 @@
+use super::error::Error;
 use super::hash_utils::*;
 use super::key_value::KeyValue;
 use super::section::Section;
 use super::Ini;
-use std::fmt::Write;
 
 enum Number {
     Invalid,
@@ -318,35 +318,6 @@ impl ParserObject<'_> {
         }
     }
 
-    fn build_error_message(&mut self, message: &str, start: usize, _end: usize) -> String {
-        let mut result = String::with_capacity(256);
-        result.push_str(message);
-        result.push_str("\n");
-        // we need to compute the line number
-        let mut index = 0usize;
-        let mut line_number = 1u32;
-        while (index < start) && (index < self.buf.len()) {
-            if self.get_char_type(index) == CharType::NewLine {
-                line_number += 1;
-                index += 1;
-                if (index < start) && (index < self.buf.len()) {
-                    if (self.get_char_type(index) == CharType::NewLine)
-                        && (self.get_char_type(index - 1) != self.get_char_type(index))
-                    {
-                        // either CRLF or LFCR
-                        index += 1;
-                    }
-                }
-            } else {
-                index += 1;
-            }
-        }
-        result.push_str("Line number: ");
-        result.write_fmt(format_args!("{}", line_number)).unwrap();
-
-        result
-    }
-
     #[inline]
     fn get_char_type(&mut self, index: usize) -> CharType {
         CHAR_TYPE[self.buf[index] as usize]
@@ -523,7 +494,7 @@ impl ParserObject<'_> {
         index
     }
     #[inline]
-    fn parse_section_name(&mut self, mut index: usize) -> Result<usize, String> {
+    fn parse_section_name(&mut self, mut index: usize) -> Result<usize, Error> {
         // assume that we start with an '[' character
         let mut start = index + 1;
         let section_start = index;
@@ -534,18 +505,20 @@ impl ParserObject<'_> {
         let mut end = start;
         loop {
             if end >= self.buf.len() {
-                return Err(self.build_error_message(
+                return Err(Error::from_parser(
                     "Unexpected end of section definition",
                     start,
                     self.buf.len(),
+                    self.buf,
                 ));
             }
             let c_type = self.get_char_type(end);
             if (c_type == CharType::Comment) || (c_type == CharType::NewLine) {
-                return Err(self.build_error_message(
+                return Err(Error::from_parser(
                     "Expecting a ']' character to finish the section !",
                     start,
                     end,
+                    self.buf,
                 ));
             }
             if c_type == CharType::EndSection {
@@ -560,20 +533,22 @@ impl ParserObject<'_> {
             end -= 1;
         }
         if end == start {
-            return Err(self.build_error_message(
+            return Err(Error::from_parser(
                 "Empty section (without any name)",
                 section_start,
                 index,
+                self.buf,
             ));
         }
         end += 1;
         // now the section name is between start and end
         let section_hash = compute_string_hash(&self.buf[start..end]);
         if self.ini.sections.contains_key(&section_hash) {
-            return Err(self.build_error_message(
+            return Err(Error::from_parser(
                 "A section with the same name already exists !",
                 start,
                 end,
+                self.buf,
             ));
         }
         // move current section to the hash_map (if any)
@@ -639,7 +614,7 @@ impl ParserObject<'_> {
     }
 
     #[inline]
-    fn parse_three_quotes_string(&mut self, mut index: usize) -> Result<usize, String> {
+    fn parse_three_quotes_string(&mut self, mut index: usize) -> Result<usize, Error> {
         // we assume that we start with three quotes
         let quote_char = self.buf[index];
         let start = index;
@@ -655,14 +630,15 @@ impl ParserObject<'_> {
             }
             index += 1;
         }
-        return Err(self.build_error_message(
+        return Err(Error::from_parser(
             "Unexpected end of multi-line string",
             start,
             self.buf.len(),
+            self.buf,
         ));
     }
     #[inline]
-    fn parse_single_quote_string(&mut self, mut index: usize) -> Result<usize, String> {
+    fn parse_single_quote_string(&mut self, mut index: usize) -> Result<usize, Error> {
         // we assume that we start with one quote
         // single quote string is a single line string
         let quote_char = self.buf[index];
@@ -673,22 +649,24 @@ impl ParserObject<'_> {
                 return Ok(index + 1);
             }
             if self.get_char_type(index) == CharType::NewLine {
-                return Err(self.build_error_message(
+                return Err(Error::from_parser(
                     "Unexpected end of single-line string",
                     start,
                     index,
+                    self.buf,
                 ));
             }
             index += 1;
         }
-        return Err(self.build_error_message(
+        return Err(Error::from_parser(
             "Unexpected end of single-line string",
             start,
             self.buf.len(),
+            self.buf,
         ));
     }
     #[inline]
-    fn parse_string(&mut self, mut index: usize) -> Result<usize, String> {
+    fn parse_string(&mut self, mut index: usize) -> Result<usize, Error> {
         // assume we start with a single or double quote
         let quote_char = self.buf[index];
         if (index + 3 <= self.buf.len())
@@ -707,7 +685,7 @@ impl ParserObject<'_> {
     }
 
     #[inline]
-    fn parse_word(&mut self, mut index: usize) -> Result<usize, String> {
+    fn parse_word(&mut self, mut index: usize) -> Result<usize, Error> {
         // assume that we start with a valid character
         // we should move until the end of the line or until a comment is found
         let start = index;
@@ -733,7 +711,7 @@ impl ParserObject<'_> {
     }
 
     #[inline]
-    fn parse_key_name(&mut self, index: usize) -> Result<usize, String> {
+    fn parse_key_name(&mut self, index: usize) -> Result<usize, Error> {
         let next = self.parse_same_type(index);
         if self.current_section.is_none() {
             self.current_section = Some(Section::new_default());
@@ -741,10 +719,11 @@ impl ParserObject<'_> {
         let hash = compute_string_hash(&self.buf[index..next]);
         let sect = self.current_section.as_mut().unwrap();
         if sect.items.contains_key(&hash) {
-            return Err(self.build_error_message(
+            return Err(Error::from_parser(
                 "Key already exists in current section",
                 index,
                 next,
+                self.buf,
             ));
         }
         self.current_key = Some(&self.text[index..next]);
@@ -753,7 +732,7 @@ impl ParserObject<'_> {
         Ok(next)
     }
 
-    fn parse_for_section_or_key(&mut self) -> Result<(), String> {
+    fn parse_for_section_or_key(&mut self) -> Result<(), Error> {
         let ch_type = self.get_char_type(self.pos);
         match ch_type {
             CharType::Space => self.pos = self.parse_same_type(self.pos),
@@ -762,25 +741,27 @@ impl ParserObject<'_> {
             CharType::Word => self.pos = self.parse_key_name(self.pos)?,
             CharType::StartSection => self.pos = self.parse_section_name(self.pos)?,
             _ => {
-                return Err(self.build_error_message(
+                return Err(Error::from_parser(
                     "Expecting a a section '[...]' or a key !",
                     self.pos,
                     self.pos + 1,
+                    self.buf,
                 ))
             }
         }
         Ok(())
     }
-    fn parse_for_assign(&mut self) -> Result<(), String> {
+    fn parse_for_assign(&mut self) -> Result<(), Error> {
         // skip any possible space
         if self.get_char_type(self.pos) == CharType::Space {
             self.pos = self.parse_same_type(self.pos);
         }
         if self.get_char_type(self.pos) != CharType::Assign {
-            return Err(self.build_error_message(
+            return Err(Error::from_parser(
                 "Expecting a '=' or ':' character !",
                 self.pos,
                 self.pos + 1,
+                self.buf,
             ));
         }
         // all good
@@ -788,7 +769,7 @@ impl ParserObject<'_> {
         self.status = Status::ExpectValue;
         Ok(())
     }
-    fn parse_for_value(&mut self) -> Result<(), String> {
+    fn parse_for_value(&mut self) -> Result<(), Error> {
         // skip any possible space
         if self.get_char_type(self.pos) == CharType::Space {
             self.pos = self.parse_same_type(self.pos);
@@ -797,13 +778,18 @@ impl ParserObject<'_> {
             CharType::String => self.pos = self.parse_string(self.pos)?,
             CharType::Word => self.pos = self.parse_word(self.pos)?,
             _ => {
-                return Err(self.build_error_message("Expecting a value", self.pos, self.pos + 1));
+                return Err(Error::from_parser(
+                    "Expecting a value",
+                    self.pos,
+                    self.pos + 1,
+                    self.buf,
+                ));
             }
         }
         self.status = Status::ExpectSectionNameOrKey;
         Ok(())
     }
-    pub fn parse(&mut self) -> Result<(), String> {
+    pub fn parse(&mut self) -> Result<(), Error> {
         while self.pos < self.buf.len() {
             //println!("Index: {}, status={:?}",self.pos,self.status);
             match self.status {

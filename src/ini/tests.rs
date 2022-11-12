@@ -1,4 +1,6 @@
+#[allow(unused_imports)]
 use super::Ini;
+#[allow(unused_imports)]
 use super::Value;
 
 #[test]

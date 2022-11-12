@@ -21,7 +21,7 @@ fn main() {
     ",
     );
     if i.is_err() {
-        println!("{}", i.err().unwrap());
+        println!("{}", i.err().unwrap().get_error_message());
         return;
     }
     let mut ini = i.ok().unwrap();
