@@ -45,18 +45,31 @@ impl_CreateFromValue_for_numbers!(u16);
 impl_CreateFromValue_for_numbers!(u32);
 impl_CreateFromValue_for_numbers!(u64);
 
-impl From<String> for Value {
-    fn from(value: String) -> Self {
-        Self::String(value)
-    }
+macro_rules! impl_from_type_for_value {
+    ($t:ty, $result_type: ty, $n:ident) => {
+        impl From<$t> for Value {
+            fn from(value: $t) -> Self {
+                Self::$n(value as $result_type)
+            }
+        }
+    };
 }
+impl_from_type_for_value!(String,String,String);
+impl_from_type_for_value!(bool,bool, Bool);
+impl_from_type_for_value!(i8,i64,Int64);
+impl_from_type_for_value!(i16,i64,Int64);
+impl_from_type_for_value!(i32,i64,Int64);
+impl_from_type_for_value!(i64,i64,Int64);
+impl_from_type_for_value!(u8,u64,UInt64);
+impl_from_type_for_value!(u16,u64,UInt64);
+impl_from_type_for_value!(u32,u64,UInt64);
+impl_from_type_for_value!(u64,u64,UInt64);
+impl_from_type_for_value!(f32,f64,Float64);
+impl_from_type_for_value!(f64,f64,Float64);
+
+
 impl From<&str> for Value {
     fn from(value: &str) -> Self {
         Self::String(String::from(value))
-    }
-}
-impl From<bool> for Value {
-    fn from(value: bool) -> Self {
-        Self::Bool(value)
     }
 }
