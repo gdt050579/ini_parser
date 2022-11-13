@@ -12,25 +12,38 @@ pub trait CreateFromValue<T> {
     fn create_from_value(val: &Value, default: T)->T;
 }
 
-impl CreateFromValue<i32> for i32 {
-    fn create_from_value(val: &Value, default: i32)->i32 {
-        if let Value::UInt64(cval) = val {
-            if (*cval)<=(i32::MAX as u64) {
-                return (*cval) as i32;
-            } else {
-                return default;
+macro_rules! impl_CreateFromValue_for_numbers {
+    ($t:ty) => {
+        impl CreateFromValue<$t> for $t {
+            fn create_from_value(val: &Value, default: $t)->$t {
+                if let Value::UInt64(cval) = val {
+                    if (*cval)<=(<$t>::MAX as u64) {
+                        return (*cval) as $t;
+                    } else {
+                        return default;
+                    }
+                }
+                if let Value::Int64(cval) = val {
+                    if ((*cval)<=(<$t>::MAX as i64)) && ((*cval)>=(<$t>::MIN as i64)) {
+                        return (*cval) as $t;
+                    } else {
+                        return default;
+                    }
+                }
+                return default;       
             }
         }
-        if let Value::Int64(cval) = val {
-            if ((*cval)<=(i32::MAX as i64)) && ((*cval)>=(i32::MIN as i64)) {
-                return (*cval) as i32;
-            } else {
-                return default;
-            }
-        }
-        return default;       
     }
 }
+
+impl_CreateFromValue_for_numbers!(i8);
+impl_CreateFromValue_for_numbers!(i16);
+impl_CreateFromValue_for_numbers!(i32);
+impl_CreateFromValue_for_numbers!(i64);
+impl_CreateFromValue_for_numbers!(u8);
+impl_CreateFromValue_for_numbers!(u16);
+impl_CreateFromValue_for_numbers!(u32);
+impl_CreateFromValue_for_numbers!(u64);
 
 impl From<String> for Value {
     fn from(value: String) -> Self {

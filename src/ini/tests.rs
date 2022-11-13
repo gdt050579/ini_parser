@@ -50,13 +50,19 @@ fn check_incomplete_section_name() {
 }
 
 #[test]
-fn check_get_for_i32() {
+fn check_get_for_numbers() {
     let i = Ini::from("[section]\nv1 = 100");
     assert!(i.is_ok(),"Fail to initialized ini object");
     let ini = i.unwrap();
     let sect = ini.get_section("Section");
     assert!(sect.is_some(),"Unable to found section [Section]");
     let sect = sect.unwrap();   
-    assert!(sect.get("v1").or_else(0)==100,"Fail to validate v1=100");
-    assert!(sect.get("v2").or_else(123)==123,"Fail to validate v2=123");
+    assert!(sect.get("v1").or_else(0i8)==100i8,"Fail to validate v1=100");
+    assert!(sect.get("v2").or_else(123i8)==123i8,"Fail to validate v2=123");
+    assert!(sect.get("v1").or_else(0i16)==100i16,"Fail to validate v1=100");
+    assert!(sect.get("v2").or_else(123i16)==123i16,"Fail to validate v2=123");
+    assert!(sect.get("v1").or_else(0i32)==100i32,"Fail to validate v1=100");
+    assert!(sect.get("v2").or_else(123i32)==123i32,"Fail to validate v2=123");
+    assert!(sect.get("v1").or_else(0i64)==100i64,"Fail to validate v1=100");
+    assert!(sect.get("v2").or_else(123i64)==123i64,"Fail to validate v2=123");
 }
